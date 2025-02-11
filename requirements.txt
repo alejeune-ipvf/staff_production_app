@@ -1,2 +1,2 @@
-openpyxl
-xlswriter
+openpyxl==3.1.5
+XlsxWriter==3.2.0
