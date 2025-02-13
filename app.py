@@ -54,16 +54,20 @@ with tab2:
                         target_production_data = production_data.loc[(production_data["procedure_name"]==procedure_name) & (production_data["procedure_version"]==procedure_version)]
                         if target_production_data.empty:
                             continue
-                        new_logbook_chunk = pd.DataFrame(columns=["stack_ref","procedure_name","data_name","data_description","data_unit","batch_data"]+[f"run_{i}" for i in range(1,MAX_COLS+1)])
+                        new_logbook_chunk = pd.DataFrame(columns=["stack_ref","procedure_name","procedure_version","data_name","data_description","data_unit","batch_data"]+[f"run_{i}" for i in range(1,MAX_COLS+1)])
                         for data in target_production_data.iterrows():
                             # data[0] is the df index, data[1] is the row
                             # for front-end purposes, we'll mark the soon-to-be greyed out cells with an "x" and format later
-                            # TODO : add a column for the procedure name and stack_ref (and version ?) to show in full logbook sheets
-                            # TODO : will need to change the lock/unlock regarding data_unit column (shifted by 1 not C anymore)
                             # WARNING : if columns are added here (before data_unit), the lock/unlock will need to be updated (data_unit won't be E column anymore)
-                            new_row = {"stack_ref":stack_ref,"procedure_name":procedure_name,"data_name":data[1]["data_name"],"data_description":data[1]["data_description"],"data_unit":data[1]["data_unit"],"batch_data": "x" if data[1]["data_perimeter"] == "run" else ""}
-                            if data[1]["data_perimeter"] == "batch":
-                                new_row.update({f"run_{i}": "x" for i in range(1,MAX_COLS+1)})
+                            new_row = {"stack_ref":stack_ref,"procedure_name":procedure_name,"procedure_version":procedure_version,"data_name":data[1]["data_name"],"data_description":data[1]["data_description"],"data_unit":data[1]["data_unit"],"batch_data": "x" if data[1]["data_perimeter"] == "run" else ""}
+                            if data[1]["data_perimeter"] == "run":
+                                for i in range(1,MAX_COLS+1):
+                                    new_row.update({f"run_{i}": ""})
+                            else:
+                                for i in range(1,MAX_COLS+1):
+                                    new_row.update({f"run_{i}": "x"})
+                            #if data[1]["data_perimeter"] == "batch":
+                            #    new_row.update({f"run_{i}": "x" for i in range(1,MAX_COLS+1)})
                             new_logbook_chunk = pd.concat([new_logbook_chunk,pd.DataFrame(new_row,index=[0])],axis=0)
                         key = target_production_data["linked_block"].iloc[0] # there should only be one ...
                         if key in full_logbook:
@@ -72,6 +76,13 @@ with tab2:
                             full_logbook[key] = new_logbook_chunk
 
                     for k,v in full_logbook.items():
+                        # group same version of the same procedure together in the chunks, aggregate stacks in stack_ref
+                        v = v.groupby([col for col in v.columns if col != "stack_ref"])["stack_ref"].apply(', '.join).reset_index()
+                        # reorder columns
+                        cols = v.columns.tolist()
+                        cols = cols[-1:] + cols[:-1]
+                        v = v[cols]
+                        
                         wb.create_sheet(title=k)
                         ws = wb[k]
                         for r in dataframe_to_rows(v, index=False, header=True):
@@ -92,8 +103,8 @@ with tab2:
                             max_length = 0
                             column = col[0].column_letter  # Get the column name
                             for cell in col:
-                                if not cell.value and column != "E":
-                                    # E column is data_unit, special case
+                                if not cell.value and column != "F":
+                                    # F column is data_unit, special case
                                     # if the cell was empty and was not in the unit column, we make it editable
                                     cell.protection = openpyxl.styles.Protection(locked=False)            
                                 elif cell.value == "x":
