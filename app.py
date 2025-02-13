@@ -43,6 +43,8 @@ with tab2:
                     valid_init = False
             if valid_init:
                 st.write("Initialization file is valid.")
+                bg_color = st.color_picker("Pick a color for the locked cells in the logbook (default : black)")
+                bg_color = bg_color[1:]
                 if st.button("Create logbook"):
 
                     st.write("Creating logbook ...")
@@ -66,8 +68,6 @@ with tab2:
                             else:
                                 for i in range(1,MAX_COLS+1):
                                     new_row.update({f"run_{i}": "x"})
-                            #if data[1]["data_perimeter"] == "batch":
-                            #    new_row.update({f"run_{i}": "x" for i in range(1,MAX_COLS+1)})
                             new_logbook_chunk = pd.concat([new_logbook_chunk,pd.DataFrame(new_row,index=[0])],axis=0)
                         key = target_production_data["linked_block"].iloc[0] # there should only be one ...
                         if key in full_logbook:
@@ -109,8 +109,7 @@ with tab2:
                                     cell.protection = openpyxl.styles.Protection(locked=False)            
                                 elif cell.value == "x":
                                     cell.value = ""
-                                    bg_color = "00000000"
-                                    cell.fill = openpyxl.styles.PatternFill(start_color=bg_color, end_color=bg_color, fill_type = "solid")
+                                    cell.fill = openpyxl.styles.PatternFill(fgColor=bg_color, fill_type = "solid")
                                 try:
                                     if len(str(cell.value)) > max_length:
                                         max_length = len(cell.value)
