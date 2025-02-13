@@ -77,12 +77,12 @@ with tab2:
 
                     for k,v in full_logbook.items():
                         # group same version of the same procedure together in the chunks, aggregate stacks in stack_ref
-                        v = v.groupby([col for col in v.columns if col != "stack_ref"])["stack_ref"].apply(', '.join).reset_index()
+                        v = v.groupby([col for col in v.columns if col != "stack_ref"], sort=False)["stack_ref"].apply(', '.join).reset_index()
                         # reorder columns
                         cols = v.columns.tolist()
                         cols = cols[-1:] + cols[:-1]
                         v = v[cols]
-                        
+
                         wb.create_sheet(title=k)
                         ws = wb[k]
                         for r in dataframe_to_rows(v, index=False, header=True):
