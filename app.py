@@ -68,7 +68,7 @@ with tab2:
                             else:
                                 for i in range(1,MAX_COLS+1):
                                     new_row.update({f"run_{i}": "x"})
-                            new_logbook_chunk = pd.concat([new_logbook_chunk,pd.DataFrame(new_row,index=[0])],axis=0)
+                            new_logbook_chunk = pd.concat([new_logbook_chunk,pd.DataFrame([new_row])],axis=0)
                         key = target_production_data["linked_block"].iloc[0] # there should only be one ...
                         if key in full_logbook:
                             full_logbook[key] = pd.concat([full_logbook[key],new_logbook_chunk],axis=0)
@@ -77,7 +77,7 @@ with tab2:
 
                     for k,v in full_logbook.items():
                         # group same version of the same procedure together in the chunks, aggregate stacks in stack_ref
-                        v = v.groupby([col for col in v.columns if col != "stack_ref"], sort=False)["stack_ref"].apply(', '.join).reset_index()
+                        v = v.groupby([col for col in v.columns if col != "stack_ref"], dropna=False,sort=False)["stack_ref"].apply(', '.join).reset_index()
                         # reorder columns
                         cols = v.columns.tolist()
                         cols = cols[-1:] + cols[:-1]
