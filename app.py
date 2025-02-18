@@ -16,7 +16,7 @@ with tab1:
     if st.button("Load procedures catalog from db"):
         @st.cache_resource
         def init_connection():
-            return pymongo.MongoClient(**st.secrets["mongo"])
+            return pymongo.MongoClient(st.secrets["db_cs"])
         client = init_connection()
         db = client["staff_db"]
         coll = db["procedures"]
