@@ -9,6 +9,7 @@ from openpyxl.styles import Font
 import pymongo
 import seaborn as sns
 import matplotlib.pyplot as plt
+import streamlit_dynamic_filters as sdf
 
 st.set_page_config(
     page_title="Staff Production Management",
@@ -46,9 +47,12 @@ with tab1:
                 new_row = {"procedure_name":doc["procedure_name"],"procedure_version":doc["procedure_version"],"linked_block":doc["linked_block"],"data_name":data["data_name"],"data_description":data["data_description"],"recipe_value":data["recipe_value"],"data_type":data["data_type"],"data_unit":data["data_unit"],"data_min_value":data["data_min_value"],"data_max_value":data["data_max_value"],"data_origin":data["data_origin"],"data_perimeter":data["data_perimeter"]}
                 new_df = pd.concat([new_df,pd.DataFrame([new_row])],axis=0)
             df = pd.concat([df,new_df],axis=0)
-        st.write("Procedures catalog loaded.")
         st.session_state["df"] = df
-        st.dataframe(df)
+    if "df" in st.session_state:
+        st.write("Procedures catalog loaded.")
+        dynamic_filters = sdf.DynamicFilters(df=st.session_state["df"], filters=['procedure_name', 'procedure_version', 'linked_block'])
+        dynamic_filters.display_filters(location="columns",num_columns=2,gap="small")
+        dynamic_filters.display_df()
 with tab2:
     if "df" in st.session_state:
         st.write("Procedures catalog loaded.")
