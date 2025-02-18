@@ -16,14 +16,15 @@ st.set_page_config(
 
 st.title('Staff Production Management')
 
-tab1,tab2 = st.tabs(["Load and View Procedure Catalog","Load Init File and Create Logbook"])
+tab1,tab2,tab3 = st.tabs(["Load and View Procedure Catalog","Load Init File and Create Logbook","Dashboards"])
+
+@st.cache_resource
+def init_connection():
+    return pymongo.MongoClient(st.secrets["db_cs"])
+client = init_connection()
 
 with tab1:
     if st.button("Load procedures catalog from db"):
-        @st.cache_resource
-        def init_connection():
-            return pymongo.MongoClient(st.secrets["db_cs"])
-        client = init_connection()
         db = client["staff_db"]
         coll = db["procedures"]
         result = coll.find()
@@ -139,3 +140,5 @@ with tab2:
                     
     else:
         st.write("No procedures catalog available, fetch them from db through previous tab.")
+with tab3:
+    st.write("Dashboards")
