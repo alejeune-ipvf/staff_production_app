@@ -12,8 +12,7 @@ import matplotlib.pyplot as plt
 
 st.set_page_config(
     page_title="Staff Production Management",
-    page_icon="hammer_and_wrench",
-    layout="wide"
+    page_icon="hammer_and_wrench"
 )
 
 st.title('Staff Production Management')
