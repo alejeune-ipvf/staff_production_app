@@ -7,6 +7,8 @@ import tempfile
 from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.styles import Font
 import pymongo
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 st.set_page_config(
     page_title="Staff Production Management",
@@ -141,4 +143,17 @@ with tab2:
     else:
         st.write("No procedures catalog available, fetch them from db through previous tab.")
 with tab3:
-    st.write("Dashboards")
+    if st.button("KDE/rug plot of after encapsulation PCEs (all available productions)"):
+        
+        db = client["staff_db"]
+        coll = db["main_performances"]
+        result = coll.find()
+
+        df = pd.DataFrame(result)
+        df.drop(columns=["_id"], inplace=True)
+
+        fig = plt.figure(figsize=(10, 4))
+        sns.set_theme(style="darkgrid")
+        sns.kdeplot(data=df, x="pce_ae", hue="production_ref",bw_adjust=1).set_title("KDE plot of PCE AE across productions")
+        sns.rugplot(data=df, x="pce_ae", hue="production_ref", height=-0.03, clip_on=False)
+        st.pyplot(fig)
