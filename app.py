@@ -17,20 +17,30 @@ st.set_page_config(
 
 st.title('Staff Production Management')
 
-tab1,tab2,tab3 = st.tabs(["Load and View Procedure Catalog","Load Init File and Create Logbook","Dashboards"])
-
 @st.cache_resource
 def init_connection():
     return pymongo.MongoClient(st.secrets["db_cs"])
+
 client = init_connection()
+
+@st.cache_data(ttl=600)
+def get_procedures():
+    db = client["staff_db"]
+    coll = db["procedures"]
+    return list(coll.find())
+
+@st.cache_data(ttl=600)
+def get_main_performances():
+    db = client["staff_db"]
+    coll = db["main_performances"]
+    return list(coll.find())
+
+tab1,tab2,tab3 = st.tabs(["Load and View Procedure Catalog","Load Init File and Create Logbook","Dashboards"])
 
 with tab1:
     if st.button("Load procedures catalog from db"):
-        db = client["staff_db"]
-        coll = db["procedures"]
-        result = coll.find()
         df = pd.DataFrame(columns=["procedure_name","procedure_version","linked_block","data_name","data_description","recipe_value","data_type","data_unit","data_min_value","data_max_value","data_origin","data_perimeter"])
-        for doc in result:
+        for doc in get_procedures():
             new_df = pd.DataFrame(columns=["procedure_name","procedure_version","linked_block","data_name","data_description","recipe_value","data_type","data_unit","data_min_value","data_max_value","data_origin","data_perimeter"])
             for data in doc["procedure_data"]:
                 new_row = {"procedure_name":doc["procedure_name"],"procedure_version":doc["procedure_version"],"linked_block":doc["linked_block"],"data_name":data["data_name"],"data_description":data["data_description"],"recipe_value":data["recipe_value"],"data_type":data["data_type"],"data_unit":data["data_unit"],"data_min_value":data["data_min_value"],"data_max_value":data["data_max_value"],"data_origin":data["data_origin"],"data_perimeter":data["data_perimeter"]}
@@ -143,12 +153,8 @@ with tab2:
         st.write("No procedures catalog available, fetch them from db through previous tab.")
 with tab3:
     if st.button("KDE/rug plot of after encapsulation PCEs (all available productions)"):
-        
-        db = client["staff_db"]
-        coll = db["main_performances"]
-        result = coll.find()
 
-        df = pd.DataFrame(result)
+        df = pd.DataFrame(get_main_performances())
         df.drop(columns=["_id"], inplace=True)
 
         fig = plt.figure(figsize=(10, 4))
