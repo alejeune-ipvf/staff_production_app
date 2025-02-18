@@ -8,7 +8,13 @@ from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.styles import Font
 import pymongo
 
-st.title('Staff production management')
+st.set_page_config(
+    page_title="Staff Production Management",
+    page_icon="hammer_and_wrench",
+    layout="wide"
+)
+
+st.title('Staff Production Management')
 
 tab1,tab2 = st.tabs(["Load and View Procedure Catalog","Load Init File and Create Logbook"])
 
