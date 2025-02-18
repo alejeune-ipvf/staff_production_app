@@ -6,28 +6,31 @@ import openpyxl
 import tempfile
 from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.styles import Font
-
+from pymongo import MongoClient
 
 st.title('Staff production management')
 
-tab1,tab2 = st.tabs(["Load, View and Edit Procedures","Load Init File and Create Logbook"])
+tab1,tab2 = st.tabs(["Load and View Procedure Catalog","Load Init File and Create Logbook"])
 
 with tab1:
-    uploaded_procedures = st.file_uploader("Select the procedures catalog Excel file from your local machine.", type="xlsx")
-    if uploaded_procedures:
-        df = pd.read_excel(uploaded_procedures)
-        edited_df = st.data_editor(df,num_rows="dynamic",hide_index=True)
-        if st.button('Save to cache / Save changes to cache'):
-            st.session_state["df"] = edited_df
-            st.write("Changes saved in cache (and available in other tabs). Download the updated file to save them permanently.")
-            buffer = BytesIO()
-            with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-                edited_df.to_excel(writer,index=False)
-            st.download_button("Download updated file", data=buffer, file_name="updated_procedures.xlsx", mime="application/vnd.ms-excel")
+    if st.button("Load procedures catalog from db"):
+        client = MongoClient("mongodb+srv://reporting_bot:Vm0pH8NvaGYi4FdZ@ipvf.kb58k.mongodb.net/")
+        db = client["staff_db"]
+        coll = db["procedures"]
+        result = coll.find()
+        df = pd.DataFrame(columns=["procedure_name","procedure_version","linked_block","data_name","data_description","recipe_value","data_type","data_unit","data_min_value","data_max_value","data_origin","data_perimeter"])
+        for doc in result:
+            new_df = pd.DataFrame(columns=["procedure_name","procedure_version","linked_block","data_name","data_description","recipe_value","data_type","data_unit","data_min_value","data_max_value","data_origin","data_perimeter"])
+            for data in doc["procedure_data"]:
+                new_row = {"procedure_name":doc["procedure_name"],"procedure_version":doc["procedure_version"],"linked_block":doc["linked_block"],"data_name":data["data_name"],"data_description":data["data_description"],"recipe_value":data["recipe_value"],"data_type":data["data_type"],"data_unit":data["data_unit"],"data_min_value":data["data_min_value"],"data_max_value":data["data_max_value"],"data_origin":data["data_origin"],"data_perimeter":data["data_perimeter"]}
+                new_df = pd.concat([new_df,pd.DataFrame([new_row])],axis=0)
+            df = pd.concat([df,new_df],axis=0)
+        st.write("Procedures catalog loaded.")
+        st.session_state["df"] = df
+        st.dataframe(df)
 with tab2:
     if "df" in st.session_state:
-        st.write("Current procedure catalog in cache :")
-        st.dataframe(st.session_state["df"])
+        st.write("Procedures catalog loaded.")
         uploaded_init = st.file_uploader("Select the production initialization file to create the logbook from.", type="xlsx")
         if uploaded_init:
             init_df = pd.read_excel(uploaded_init)
@@ -126,4 +129,4 @@ with tab2:
 
                     
     else:
-        st.write("No procedures in cache, please upload a valid procedures catalog first.")
+        st.write("No procedures catalog available, fetch them from db through previous tab.")
