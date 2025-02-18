@@ -6,7 +6,7 @@ import openpyxl
 import tempfile
 from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.styles import Font
-from pymongo import MongoClient
+import pymongo
 
 st.title('Staff production management')
 
@@ -14,7 +14,10 @@ tab1,tab2 = st.tabs(["Load and View Procedure Catalog","Load Init File and Creat
 
 with tab1:
     if st.button("Load procedures catalog from db"):
-        client = MongoClient("mongodb+srv://reporting_bot:Vm0pH8NvaGYi4FdZ@ipvf.kb58k.mongodb.net/")
+        @st.cache_resource
+        def init_connection():
+            return pymongo.MongoClient(**st.secrets["mongo"])
+        client = init_connection()
         db = client["staff_db"]
         coll = db["procedures"]
         result = coll.find()
