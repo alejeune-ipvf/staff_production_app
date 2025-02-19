@@ -14,10 +14,12 @@ import hmac
 
 st.set_page_config(
     page_title="Staff Production Management",
-    page_icon="hammer_and_wrench"
+    page_icon="hammer_and_wrench",
+    layout="wide"
 )
 
 st.title('Staff Production Management')
+sns.set_theme(style="darkgrid")
 
 def check_password():
     """Returns `True` if the user had the correct password."""
@@ -64,6 +66,18 @@ def get_main_performances():
     coll = db["main_performances"]
     return list(coll.find())
 
+@st.cache_data(ttl=600)
+def get_available_productions_for_iv():
+    db = client["staff_db"]
+    coll = db["iv"]
+    return coll.distinct("production_ref")
+
+@st.cache_data(ttl=600)
+def get_ivs_for_production_ref(production_ref):
+    db = client["staff_db"]
+    coll = db["iv"]
+    return list(coll.find({"production_ref": production_ref}))
+
 tab1,tab2,tab3 = st.tabs(["Load and View Procedure Catalog","Load Init File and Create Logbook","Dashboards"])
 
 with tab1:
@@ -77,13 +91,13 @@ with tab1:
             df = pd.concat([df,new_df],axis=0)
         st.session_state["df"] = df
     if "df" in st.session_state:
-        st.write("Procedures catalog loaded.")
+        st.success("Procedures catalog loaded.")
         dynamic_filters = sdf.DynamicFilters(df=st.session_state["df"], filters=['procedure_name', 'procedure_version', 'linked_block'])
         dynamic_filters.display_filters(location="columns",num_columns=2,gap="small")
         dynamic_filters.display_df()
 with tab2:
     if "df" in st.session_state:
-        st.write("Procedures catalog loaded.")
+        st.success("Procedures catalog loaded.")
         uploaded_init = st.file_uploader("Select the production initialization file to create the logbook from.", type="xlsx")
         if uploaded_init:
             init_df = pd.read_excel(uploaded_init)
@@ -98,7 +112,7 @@ with tab2:
                     st.write(f"Procedure {procedure_name} v{procedure_version} not found in the catalog. Please add it in the catalog and save cache changes or remove it from the initialization file before proceeding.")
                     valid_init = False
             if valid_init:
-                st.write("Initialization file is valid.")
+                st.success("Initialization file is valid.")
                 bg_color = st.color_picker("Pick a color for the locked cells in the logbook (default : black)")
                 bg_color = bg_color[1:]
                 if st.button("Create logbook"):
@@ -182,15 +196,53 @@ with tab2:
 
                     
     else:
-        st.write("No procedures catalog available, fetch them from db through previous tab.")
+        st.warning("No procedures catalog available, fetch them from db through previous tab.")
 with tab3:
-    if st.button("KDE/rug plot of after encapsulation PCEs (all available productions)"):
+
+    st.header("KDE plot of PCE AE across productions")
+
+    if st.button("Query and Plot PCEs"):
 
         df = pd.DataFrame(get_main_performances())
         df.drop(columns=["_id"], inplace=True)
 
         fig = plt.figure(figsize=(10, 4))
-        sns.set_theme(style="darkgrid")
+    
         sns.kdeplot(data=df, x="pce_ae", hue="production_ref",bw_adjust=1).set_title("KDE plot of PCE AE across productions")
         sns.rugplot(data=df, x="pce_ae", hue="production_ref", height=-0.03, clip_on=False)
-        st.pyplot(fig)
+        st.pyplot(fig,use_container_width=False)
+
+    st.divider()
+
+    st.header("IVs")
+
+    st.write("Select a production reference to display its IVs")
+    selected_production = st.selectbox("Available productions : ", get_available_productions_for_iv())
+
+    if selected_production:
+        if st.button("Query and Plot IVs"):
+
+            data = get_ivs_for_production_ref(selected_production)
+            df = pd.DataFrame(columns=["device_ref","voltage_fw","current_density_fw","power_fw","voltage_rv","current_density_rv","power_rv"])
+            for d in data:
+                del d["_id"]
+                device_ref = d["device_ref"]
+                for a,b,c,d,e,f in zip(d["iv_data"]["voltage_fw"],d["iv_data"]["current_density_fw"],d["iv_data"]["power_fw"],d["iv_data"]["voltage_rv"],d["iv_data"]["current_density_rv"],d["iv_data"]["power_rv"]):
+                    new_row = {"device_ref":device_ref,"voltage_fw":a,"current_density_fw":b,"power_fw":c,"voltage_rv":d,"current_density_rv":e,"power_rv":f}
+                    df = pd.concat([df,pd.DataFrame([new_row])],axis=0,ignore_index=True)
+            
+            fig = plt.figure(figsize=(12, 6))
+            plt.subplot(2,1,1)
+            sns.lineplot(data=df, x="voltage_fw", y="current_density_fw", hue="device_ref").set_title(f"{selected_production} : IV Forward")
+            plt.subplot(2,1,2)
+            sns.lineplot(data=df, x="voltage_rv", y="current_density_rv", hue="device_ref").set_title(f"{selected_production} : IV Reverse")
+            fig.tight_layout()
+            st.pyplot(fig,use_container_width=False)
+
+
+
+
+
+
+
+            
