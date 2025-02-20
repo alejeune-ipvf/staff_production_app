@@ -67,7 +67,7 @@ def get_main_performances():
     return list(coll.find())
 
 @st.cache_data(ttl=600)
-def get_available_productions_for_iv():
+def get_available_productions_for_ivs():
     db = client["staff_db"]
     coll = db["iv"]
     return coll.distinct("production_ref")
@@ -199,30 +199,37 @@ with tab2:
         st.warning("No procedures catalog available, fetch them from db through previous tab.")
 with tab3:
 
-    st.header("KDE plot of PCE AE across productions")
+    st.header("Main Performances")
 
-    if st.button("Query and Plot PCEs"):
+    st.write("Select a main performance to display")
+    selected_main_performance = st.selectbox("Available main performances : ", ["voc_be","jsc_be","ff_be","pce_be","voc_ae","jsc_ae","ff_ae","pce_ae"])
 
+    def kde_rug_plot_main_performance(selected_main_performance,selected_bw_adjust):
         df = pd.DataFrame(get_main_performances())
         df.drop(columns=["_id"], inplace=True)
 
         fig = plt.figure(figsize=(10, 4))
     
-        sns.kdeplot(data=df, x="pce_ae", hue="production_ref",bw_adjust=1).set_title("KDE plot of PCE AE across productions")
-        sns.rugplot(data=df, x="pce_ae", hue="production_ref", height=-0.03, clip_on=False)
+        sns.kdeplot(data=df, x=selected_main_performance, hue="production_ref",bw_adjust=selected_bw_adjust).set_title(f"KDE plot of {selected_main_performance} across productions")
+        sns.rugplot(data=df, x=selected_main_performance, hue="production_ref", height=-0.03, clip_on=False)
         st.pyplot(fig,use_container_width=False)
+
+    if selected_main_performance:
+        selected_bw_adjust = st.slider("Bandwidth adjustment", min_value=0.1, max_value=5.0, value=1.0, step=0.1)
+        if st.button("Query and plot selected main performance"):
+            kde_rug_plot_main_performance(selected_main_performance,selected_bw_adjust)
 
     st.divider()
 
     st.header("IVs")
 
     st.write("Select a production reference to display its IVs")
-    selected_production = st.selectbox("Available productions : ", get_available_productions_for_iv())
+    selected_production_for_ivs = st.selectbox("Available productions : ", get_available_productions_for_ivs())
 
-    if selected_production:
-        if st.button("Query and Plot IVs"):
+    if selected_production_for_ivs:
+        if st.button("Query and plot IVs"):
 
-            data = get_ivs_for_production_ref(selected_production)
+            data = get_ivs_for_production_ref(selected_production_for_ivs)
             df = pd.DataFrame(columns=["device_ref","voltage_fw","current_density_fw","power_fw","voltage_rv","current_density_rv","power_rv"])
             for d in data:
                 del d["_id"]
@@ -233,9 +240,9 @@ with tab3:
             
             fig = plt.figure(figsize=(12, 6))
             plt.subplot(2,1,1)
-            sns.lineplot(data=df, x="voltage_fw", y="current_density_fw", hue="device_ref").set_title(f"{selected_production} : IV Forward")
+            sns.lineplot(data=df, x="voltage_fw", y="current_density_fw", hue="device_ref").set_title(f"{selected_production_for_ivs} : IV Forward")
             plt.subplot(2,1,2)
-            sns.lineplot(data=df, x="voltage_rv", y="current_density_rv", hue="device_ref").set_title(f"{selected_production} : IV Reverse")
+            sns.lineplot(data=df, x="voltage_rv", y="current_density_rv", hue="device_ref").set_title(f"{selected_production_for_ivs} : IV Reverse")
             fig.tight_layout()
             st.pyplot(fig,use_container_width=False)
 
